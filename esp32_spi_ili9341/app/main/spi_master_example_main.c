@@ -18,6 +18,12 @@
 
 #include "pretty_effect.h"
 
+//#define ESP_DEBUG
+#ifdef ESP_DEBUG
+#define ESP_DBG printf
+#else
+#define ESP_DBG
+#endif
 /*
  This code displays some fancy graphics on the 320x240 LCD on an ESP-WROVER_KIT board.
  This example demonstrates the use of both spi_device_transmit as well as
@@ -182,7 +188,7 @@ void lcd_data(spi_device_handle_t spi, const uint8_t *data, int len) {
 //set the D/C line to the value indicated in the user field.
 void lcd_spi_pre_transfer_callback(spi_transaction_t *t) {
 	int dc = (int) t->user;
-//  printf("%d\n", dc);
+//  ESP_DBG("%d\n", dc);
 		gpio_set_level(PIN_NUM_DC, dc);
 		gpio_set_level(PIN_NUM_SIGNAL_LED, dc);
 }
@@ -266,10 +272,10 @@ void lcd_init(spi_device_handle_t spi) {
 	}
 
 	///Enable backlight
-	gpio_set_level(PIN_NUM_BCKL, 0);
+	gpio_set_level(PIN_NUM_BCKL, 1);
 }
 
-//To send a set of lines we have to send a command, 2 data bytes, another command, 2 more data bytes and another command
+//To send a set of lines, we have to send a command, 2 data bytes, another command, 2 more data bytes and another command
 //before sending the line data itself; a total of 6 transactions. (We can't put all of this in just one transaction
 //because the D/C line needs to be toggled in the middle.)
 //This routine queues these commands up so they get sent as quickly as possible.
@@ -285,38 +291,43 @@ static void send_lines(spi_device_handle_t spi, int ypos, uint16_t *linedata) {
 	for (x = 0; x < 6; x++) {
 		memset(&trans[x], 0, sizeof(spi_transaction_t));
 		if ((x & 1) == 0) {
-			//Even transfers are commands
+			//Even transfers are commands //偶数
 			trans[x].length = 8;
 			trans[x].user = (void*) 0;
 		} else {
-			//Odd transfers are data
+			//Odd transfers are data 奇数
 			trans[x].length = 8 * 4;
 			trans[x].user = (void*) 1;
 		}
-		trans[x].flags = SPI_TRANS_USE_TXDATA;
+		trans[x].flags = SPI_TRANS_USE_TXDATA; //初始话值, 看后面
 	}
 	trans[0].tx_data[0] = 0x2A;           //Column Address Set
+
 	trans[1].tx_data[0] = 0;              //Start Col High
 	trans[1].tx_data[1] = 0;              //Start Col Low
 	trans[1].tx_data[2] = (320) >> 8;       //End Col High
 	trans[1].tx_data[3] = (320) & 0xff;     //End Col Low
+
 	trans[2].tx_data[0] = 0x2B;           //Page address set
 	trans[3].tx_data[0] = ypos >> 8;        //Start page high
 	trans[3].tx_data[1] = ypos & 0xff;      //start page low
 	trans[3].tx_data[2] = (ypos + PARALLEL_LINES) >> 8;    //end page high
 	trans[3].tx_data[3] = (ypos + PARALLEL_LINES) & 0xff;  //end page low
+
 	trans[4].tx_data[0] = 0x2C;           //memory write
+
 	trans[5].tx_buffer = linedata;        //finally send the line data
 	trans[5].length = 320 * 2 * 8 * PARALLEL_LINES;       //Data length, in bits
 	trans[5].flags = 0; //undo SPI_TRANS_USE_TXDATA flag
 
 	//Queue all transactions.
-	printf("send line[%d]\n", ypos);
+//	ESP_DBG("send line[%d]\n", ypos);
 	for (x = 0; x < 6; x++) {
 		ret = spi_device_queue_trans(spi, &trans[x], portMAX_DELAY);
-		printf("x=%d, ret=%d\n", x, ret);
+//		ESP_DBG("x=%d, length=%d\n", x, trans[x].length);
 		assert(ret==ESP_OK);
 	}
+
 	//When we are here, the SPI driver is busy (in the background) getting the transactions sent. That happens
 	//mostly using DMA, so the CPU doesn't have much to do here. We're not going to wait for the transaction to
 	//finish because we may as well spend the time calculating the next line. When that is done, we can call
@@ -327,10 +338,10 @@ static void send_line_finish(spi_device_handle_t spi) {
 	spi_transaction_t *rtrans = NULL;
 	esp_err_t ret;
 	//Wait for all 6 transactions to be done and get back the results.
-	printf("send line finish\n");
+//	ESP_DBG("send line finish\n");
 	for (int x = 0; x < 6; x++) {
 		ret = spi_device_get_trans_result(spi, &rtrans, portMAX_DELAY);
-		printf("current x=%d, rxlength=%d\n", x, rtrans->rxlength);
+//		ESP_DBG("current x=%d, rxlength=%d\n", x, rtrans->rxlength);
 		assert(ret==ESP_OK);
 		//We could inspect rtrans now if we received any info back. The LCD is treated as write-only, though.
 	}
