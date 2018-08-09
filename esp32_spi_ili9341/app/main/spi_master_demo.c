@@ -17,7 +17,8 @@
 #include "driver/gpio.h"
 
 #include "pretty_effect.h"
-
+#include "lv_gui_task.h"
+#include "spi_master_demo.h"
 //#define ESP_DEBUG
 #ifdef ESP_DEBUG
 #define ESP_DBG printf
@@ -50,6 +51,8 @@
 //but less overhead for setting up / finishing transfers. Make sure 240 is dividable by this.
 #define PARALLEL_LINES 16
 
+
+spi_device_handle_t spi;
 /*
  The LCD needs a bunch of command/argument values to be initialized. They are stored in this struct.
  */
@@ -387,7 +390,6 @@ static void display_pretty_colors(spi_device_handle_t spi) {
 
 void app_main() {
 	esp_err_t ret;
-	spi_device_handle_t spi;
 	bzero(&spi, sizeof(spi_device_handle_t));
 	spi_bus_config_t buscfg = {
 			.miso_io_num = PIN_NUM_MISO,
@@ -417,10 +419,11 @@ void app_main() {
 	signal_led_init();
 	//Initialize the LCD
 	lcd_init(spi);
+	gui_init();
 	//Initialize the effect displayed
-	ret = pretty_effect_init();
-	ESP_ERROR_CHECK(ret);
+//	ret = pretty_effect_init();
+//	ESP_ERROR_CHECK(ret);
 
 	//Go do nice stuff.
-	display_pretty_colors(spi);
+//	display_pretty_colors(spi);
 }

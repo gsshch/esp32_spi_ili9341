@@ -6,3 +6,5 @@
 
 #Compile image file into the resulting firmware binary
 COMPONENT_EMBED_FILES := image.jpg
+COMPONENT_SRCDIRS :=  .  ../lvgl ../lvgl/lv_core  ../lvgl/lv_objx  ../lvgl/lv_themes  ../lvgl/lv_draw  ../lvgl/lv_hal  ../lvgl/lv_misc  ../lvgl/lv_misc/lv_fonts   ../lvgl/lv_drivers 
+COMPONENT_PRIV_INCLUDEDIRS := .  ../lvgl ../lvgl/lv_core  ../lvgl/lv_objx  ../lvgl/lv_themes  ../lvgl/lv_draw  ../lvgl/lv_hal  ../lvgl/lv_misc  ../lvgl/lv_drivers
